@@ -1,22 +1,3 @@
-Skip to content
-Search or jump to…
-
-Pull requests
-Issues
-Marketplace
-Explore
-
-@ghassan24601
-0
-030samtheBrave/FSND-Deploy-Flask-App-to-Kubernetes-Using-EKS-1
-forked from cschan1828/FSND-Deploy-Flask-App-to-Kubernetes-Using-EKS
- Code Pull requests 0 Projects 0 Wiki Security Insights
-FSND-Deploy-Flask-App-to-Kubernetes-Using-EKS-1/ci-cd-codepipeline.cfn.yml
-@cschan1828 cschan1828 Inital commit.
-839e4d5 8 days ago
-@kbehrman@cschan1828
-Executable File  371 lines (341 sloc)  11.6 KB
-
 ---
 AWSTemplateFormatVersion: 2010-09-09
 
@@ -59,7 +40,7 @@ Parameters:
 
   GitHubUser:
     Type: String
-    Default: cschan1828
+    Default: ghassan24601
     Description: GitHub username or organization
     MinLength: 3
     MaxLength: 100
@@ -149,18 +130,22 @@ Resources:
               'LogicalResourceId': event['LogicalResourceId'],
               'Data': {"Message": "Resource creation successful!"},
             }
+
             client = boto3.client('iam')
             try:
               if event['RequestType'] == 'Create':
                 kubectl_role_name = event['ResourceProperties']['KubectlRoleName']
                 build_role_arn = event['ResourceProperties']['CodeBuildServiceRoleArn']
+
                 assume = client.get_role(RoleName = kubectl_role_name)
                 assume_doc = assume['Role']['AssumeRolePolicyDocument']
                 roles = [ { 'Effect': 'Allow', 'Principal': { 'AWS': build_role_arn }, 'Action': 'sts:AssumeRole' } ]
+
                 for statement in assume_doc['Statement']:
                   if 'AWS' in statement['Principal']:
                     if statement['Principal']['AWS'].startswith('arn:aws:iam:'):
                       roles.append(statement)
+
                 assume_doc['Statement'] = roles
                 update_response = client.update_assume_role_policy(RoleName = kubectl_role_name, PolicyDocument = json.dumps(assume_doc))
             except Exception as e:
@@ -168,10 +153,12 @@ Resources:
               response['Status'] = 'FAILED'
               response["Reason"] = e
               response['Data'] = {"Message": "Resource creation failed"}
+
             response_body = json.dumps(response)
             headers = {'content-type': '', "content-length": len(response_body) }
             put_response = requests.put(event['ResponseURL'], headers=headers, data=response_body)
             return response
+
       Handler: index.handler
       Role: !GetAtt CustomResourceLambdaExecutionRole.Arn
       Runtime: python2.7
